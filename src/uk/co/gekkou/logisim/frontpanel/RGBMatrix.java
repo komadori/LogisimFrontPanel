@@ -2,8 +2,7 @@ package uk.co.gekkou.logisim.frontpanel;
 
 import com.cburch.logisim.data.*;
 import com.cburch.logisim.instance.*;
-import java.awt.Color;
-import java.awt.Graphics;
+import java.awt.Graphics2D;
 
 /**
  *
@@ -105,6 +104,8 @@ public class RGBMatrix extends InstanceFactory
         AttributeSet attrs = inst.getAttributeSet();
         int selectWidth = attrs.getValue(ATTR_SELECT).getWidth();
         int dataWidth = attrs.getValue(ATTR_DATA).getWidth();
+        Direction first = attrs.getValue(ATTR_FIRST);
+        int window = attrs.getValue(ATTR_WINDOW);
 
         int rows = getRows(attrs);
         int cols = getCols(attrs);
@@ -114,41 +115,11 @@ public class RGBMatrix extends InstanceFactory
         int pxOffX = bounds.getX() + (bounds.getWidth() - pxWidth) / 2;
         int pxOffY = bounds.getY() + (bounds.getHeight() - pxHeight) / 2;
         
-        int xSel, ySel, xDat, yDat;
-        switch (attrs.getValue(ATTR_FIRST).toDegrees()) {
-            case 270:
-                xSel = 0; ySel = 1;
-                xDat = 1; yDat = 0;
-                break;
-            case 0:
-                xSel = -1; ySel = 0;
-                xDat = 0; yDat = 1;
-                pxOffX += pxWidth - ELEM_SIZE;
-                break;
-            case 90:
-                xSel = 0; ySel = -1;
-                xDat = -1; yDat = 0; 
-                pxOffX += pxWidth - ELEM_SIZE;
-                pxOffY += pxHeight - ELEM_SIZE;
-                break;
-            case 180:
-                xSel = 1; ySel = 0;
-                xDat = 0; yDat = -1;
-                pxOffY += pxHeight - ELEM_SIZE;
-                break;
-            default:
-                throw new IllegalStateException("Bad Direction");
-        }
-        
-        Graphics g = painter.getGraphics();
-        g.setColor(Color.BLACK);
-        for (int s=0; s<selectWidth; s++) {
-            for (int d=0; d<dataWidth; d++) {
-                int x = pxOffX + ELEM_SIZE*(s*xSel + d*xDat);
-                int y = pxOffY + ELEM_SIZE*(s*ySel + d*yDat);
-                g.drawRect(x, y, ELEM_SIZE, ELEM_SIZE);
-            }
-        }
+        Graphics2D g = (Graphics2D)painter.getGraphics();
+        RGBMatrixData data = new RGBMatrixData(dataWidth, selectWidth, window);
+        data.loadLine(0, 1, 2, 4);
+        data.updateImageLine(0);
+        data.renderImage(g, first, pxOffX, pxOffY, pxWidth, pxHeight);
         
         painter.drawBounds();
         painter.drawPorts();
@@ -157,5 +128,6 @@ public class RGBMatrix extends InstanceFactory
     @Override
     public void propagate(InstanceState state)
     {
+        //
     }
 }
