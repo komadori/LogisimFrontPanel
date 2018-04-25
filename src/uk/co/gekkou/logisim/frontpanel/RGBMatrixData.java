@@ -37,6 +37,20 @@ public class RGBMatrixData implements InstanceData, Cloneable
     {
         return d*COL_COUNT + col;
     }
+
+    public static RGBMatrixData get(InstanceState inst, int dataWidth, int selectWidth, int fusionWindow)
+    {
+        RGBMatrixData data = (RGBMatrixData)inst.getData();
+        if (data == null ||
+            data._dataWidth != dataWidth ||
+            data._selectWidth != selectWidth ||
+            data._fusionWindow != fusionWindow)
+        {
+            data = new RGBMatrixData(dataWidth, selectWidth, fusionWindow);
+            inst.setData(data);
+        }
+        return data;
+    }
     
     public RGBMatrixData(int dataWidth, int selectWidth, int fusionWindow)
     {

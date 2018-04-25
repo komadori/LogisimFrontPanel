@@ -116,9 +116,7 @@ public class RGBMatrix extends InstanceFactory
         int pxOffY = bounds.getY() + (bounds.getHeight() - pxHeight) / 2;
         
         Graphics2D g = (Graphics2D)painter.getGraphics();
-        RGBMatrixData data = new RGBMatrixData(dataWidth, selectWidth, window);
-        data.loadLine(0, 1, 2, 4);
-        data.updateImageLine(0);
+        RGBMatrixData data = RGBMatrixData.get(painter, dataWidth, selectWidth, window);
         data.renderImage(g, first, pxOffX, pxOffY, pxWidth, pxHeight);
         
         painter.drawBounds();
@@ -128,6 +126,22 @@ public class RGBMatrix extends InstanceFactory
     @Override
     public void propagate(InstanceState state)
     {
-        //
+        AttributeSet attrs = state.getAttributeSet();
+        int selectWidth = attrs.getValue(ATTR_SELECT).getWidth();
+        int dataWidth = attrs.getValue(ATTR_DATA).getWidth();
+        int window = attrs.getValue(ATTR_WINDOW);
+        
+        int r = state.getPort(PORT_R).toIntValue();
+        int g = state.getPort(PORT_G).toIntValue();
+        int b = state.getPort(PORT_B).toIntValue();
+        int s = state.getPort(PORT_S).toIntValue();
+        
+        RGBMatrixData data = RGBMatrixData.get(state, dataWidth, selectWidth, window);
+        for (int i=0; i<data._selectWidth; i++) {
+            if (((s >> i) & 1) != 0) {
+                data.loadLine(i, r, g, b);
+                data.updateImageLine(i);
+            }
+        }
     }
 }
