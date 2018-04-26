@@ -27,6 +27,7 @@ public class RGBMatrixData implements InstanceData, Cloneable
     int[] _accumBuf;
     BufferedImage _image;
     AffineTransform _cachedTx;
+    int _oldSelector;
 
     private int getDataIndex(int s, int t, int col)
     {
@@ -64,13 +65,27 @@ public class RGBMatrixData implements InstanceData, Cloneable
             BufferedImage.TYPE_INT_RGB);
     }
     
-    public void loadLine(int s, int r, int g, int b)
+    public void loadLines(int selector, int r, int g, int b)
     {
-        int t = _dataIndices[s];
-        _data[getDataIndex(s, t, COL_R)] = r;
-        _data[getDataIndex(s, t, COL_G)] = g;
-        _data[getDataIndex(s, t, COL_B)] = b;
-        _dataIndices[s] = (t+1) % _fusionWindow;
+        int newSel = selector & ~_oldSelector;
+        for (int s=0; newSel != 0; s++) {
+            int i = Integer.numberOfTrailingZeros(newSel);
+            s += i;
+            newSel >>= i + 1;
+            _dataIndices[s] = (_dataIndices[s]+1) % _fusionWindow;
+        }
+        int allSel = selector;
+        for (int s=0; allSel != 0; s++) {
+            int i = Integer.numberOfTrailingZeros(allSel);
+            s += i;
+            allSel >>= i + 1;
+            int t = _dataIndices[s];
+            _data[getDataIndex(s, t, COL_R)] = r;
+            _data[getDataIndex(s, t, COL_G)] = g;
+            _data[getDataIndex(s, t, COL_B)] = b;
+            updateImageLine(s);
+        }
+        _oldSelector = selector;
     }
     
     public void updateImageLine(int s)

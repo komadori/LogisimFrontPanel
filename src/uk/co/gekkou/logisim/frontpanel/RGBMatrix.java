@@ -137,11 +137,6 @@ public class RGBMatrix extends InstanceFactory
         int s = state.getPort(PORT_S).toIntValue();
         
         RGBMatrixData data = RGBMatrixData.get(state, dataWidth, selectWidth, window);
-        for (int i=0; i<data._selectWidth; i++) {
-            if (((s >> i) & 1) != 0) {
-                data.loadLine(i, r, g, b);
-                data.updateImageLine(i);
-            }
-        }
+        data.loadLines(s, r, g, b);
     }
 }
