@@ -6,7 +6,6 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.util.Arrays;
 
 /**
  *
@@ -19,25 +18,23 @@ public class RGBMatrixData implements InstanceData, Cloneable
     private static final int COL_B = 2;
     private static final int COL_COUNT = 3;
     
+    public static enum UpdateMode
+    {
+        UPDATE_DESELECT_ANY,
+        UPDATE_DESELECT_LAST
+    }
+    
     int _dataWidth;
     int _selectWidth;
     int _fusionWindow;
-    int[] _data;
-    int[] _dataIndices;    
-    int[] _accumBuf;
+    FusionBuffer[] _lineBufs;
     BufferedImage _image;
     AffineTransform _cachedTx;
+    long _oldTickCount;
     int _oldSelector;
-
-    private int getDataIndex(int s, int t, int col)
-    {
-        return col*_fusionWindow*COL_COUNT + t*COL_COUNT + col;
-    }
-    
-    private int getAccumIndex(int d, int col)
-    {
-        return d*COL_COUNT + col;
-    }
+    int _oldR;
+    int _oldG;
+    int _oldB;
 
     public static RGBMatrixData get(InstanceState inst, int dataWidth, int selectWidth, int fusionWindow)
     {
@@ -58,55 +55,56 @@ public class RGBMatrixData implements InstanceData, Cloneable
         _dataWidth = dataWidth;
         _selectWidth = selectWidth;
         _fusionWindow = fusionWindow;
-        _data = new int[selectWidth*fusionWindow*COL_COUNT];
-        _dataIndices = new int[selectWidth];
-        _accumBuf = new int[dataWidth*COL_COUNT];
+        _lineBufs = new FusionBuffer[selectWidth*COL_COUNT];
+        for (int i=0; i<_lineBufs.length; i++) {
+            _lineBufs[i] = new FusionBuffer(0, dataWidth, fusionWindow);
+        }
         _image = new BufferedImage(dataWidth, selectWidth,
             BufferedImage.TYPE_INT_RGB);
     }
     
-    public void loadLines(int selector, int r, int g, int b)
+    private FusionBuffer getLineBuffer(int line, int colour)
     {
-        int newSel = selector & ~_oldSelector;
-        for (int s=0; newSel != 0; s++) {
-            int i = Integer.numberOfTrailingZeros(newSel);
-            s += i;
-            newSel >>= i + 1;
-            _dataIndices[s] = (_dataIndices[s]+1) % _fusionWindow;
-        }
-        int allSel = selector;
-        for (int s=0; allSel != 0; s++) {
-            int i = Integer.numberOfTrailingZeros(allSel);
-            s += i;
-            allSel >>= i + 1;
-            int t = _dataIndices[s];
-            _data[getDataIndex(s, t, COL_R)] = r;
-            _data[getDataIndex(s, t, COL_G)] = g;
-            _data[getDataIndex(s, t, COL_B)] = b;
-            updateImageLine(s);
-        }
-        _oldSelector = selector;
+        return _lineBufs[COL_COUNT*line+colour];
     }
     
-    public void updateImageLine(int s)
+    public boolean loadLines(
+        long tickCount, int selector, int r, int g, int b, UpdateMode updateMode)
     {
-        for (int i=0; i<_accumBuf.length; i++) {
-            _accumBuf[i] = 0;
+        int duration = (int)Math.min(Integer.MAX_VALUE, tickCount - _oldTickCount);
+        for (int i=0; i<_selectWidth; i++) {
+            boolean active = ((_oldSelector >> i) & 1) == 1;
+            getLineBuffer(i, COL_R).advance(active ? _oldR : 0, duration);
+            getLineBuffer(i, COL_G).advance(active ? _oldG : 0, duration);
+            getLineBuffer(i, COL_B).advance(active ? _oldB : 0, duration);
         }
-        for (int t=0; t<_fusionWindow; t++) {
-            for (int col=0; col<COL_COUNT; col++) {
-                int data = _data[getDataIndex(s, t, col)];
-                for (int d=0; d<_dataWidth; d++) {
-                    _accumBuf[getAccumIndex(d, col)] += data & 1;
-                    data >>= 1;
-                }
+        boolean update = false;
+        switch (updateMode)
+        {
+            case UPDATE_DESELECT_ANY:
+                update = (~selector & _oldSelector) != 0;
+                break;
+            case UPDATE_DESELECT_LAST:
+                update = (~selector & _oldSelector & (1 << (_dataWidth-1))) != 0;
+                break;
+        }
+        _oldTickCount = tickCount;
+        _oldSelector = selector;
+        _oldR = r;
+        _oldG = g;
+        _oldB = b;
+        return update;
+    }
+    
+    public void updateImage(int maxDuty)
+    {
+        for (int line=0; line<_selectWidth; line++) {
+            for (int i=0; i<_dataWidth; i++) {
+                int r = (Math.min(maxDuty, getLineBuffer(line, COL_R).getCount(i))*0xff)/maxDuty;
+                int g = (Math.min(maxDuty, getLineBuffer(line, COL_G).getCount(i))*0xff)/maxDuty;
+                int b = (Math.min(maxDuty, getLineBuffer(line, COL_B).getCount(i))*0xff)/maxDuty;
+                _image.setRGB(i, line, r << 16 | g << 8 | b);
             }
-        }
-        for (int d=0; d<_dataWidth; d++) {
-            int r = (_accumBuf[getAccumIndex(d, COL_R)]*0xff)/_fusionWindow;
-            int g = (_accumBuf[getAccumIndex(d, COL_G)]*0xff)/_fusionWindow;
-            int b = (_accumBuf[getAccumIndex(d, COL_B)]*0xff)/_fusionWindow;
-            _image.setRGB(d, s, r << 16 | g << 8 | b);
         }
     }
     
@@ -147,15 +145,20 @@ public class RGBMatrixData implements InstanceData, Cloneable
         _dataWidth = state._dataWidth;
         _selectWidth = state._selectWidth;
         _fusionWindow = state._fusionWindow;
-        _data = Arrays.copyOf(state._data, state._data.length);
-        _dataIndices = Arrays.copyOf(
-            state._dataIndices, state._dataIndices.length);
-        _accumBuf = new int[state._accumBuf.length];
+        _lineBufs = new FusionBuffer[state._lineBufs.length];
+        for (int i=0; i<_lineBufs.length; i++) {
+            _lineBufs[i] = (FusionBuffer)state._lineBufs[i].clone();
+        }
         _image = new BufferedImage(
             state._image.getColorModel(),
             state._image.copyData(null),
             state._image.isAlphaPremultiplied(),
             null);
+        _oldTickCount = state._oldTickCount;
+        _oldSelector = state._oldSelector;
+        _oldR = state._oldR;
+        _oldG = state._oldG;
+        _oldB = state._oldB;
     }
     
     @Override

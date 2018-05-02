@@ -2,6 +2,8 @@ package uk.co.gekkou.logisim.frontpanel;
 
 import com.cburch.logisim.data.*;
 import com.cburch.logisim.instance.*;
+import com.cburch.logisim.std.wiring.*;
+import com.cburch.logisim.util.*;
 import java.awt.Graphics2D;
 
 /**
@@ -10,6 +12,13 @@ import java.awt.Graphics2D;
  */
 public class RGBMatrix extends InstanceFactory
 {
+    private static final AttributeOption UPDATE_DESELECT_ANY =
+        new AttributeOption("deselectAny",
+            StringUtil.constantGetter("Any Line Deselected"));
+    private static final AttributeOption UPDATE_DESELECT_LAST =
+        new AttributeOption("deselectLast",
+            StringUtil.constantGetter("Last Line Deselected"));
+    
     private static final Attribute<BitWidth> ATTR_DATA =
         Attributes.forBitWidth("Data Width");
     private static final Attribute<BitWidth> ATTR_SELECT =
@@ -17,7 +26,18 @@ public class RGBMatrix extends InstanceFactory
     private static final Attribute<Direction> ATTR_FIRST =
         Attributes.forDirection("First Data Line");
     private static final Attribute<Integer> ATTR_WINDOW =
-        Attributes.forIntegerRange("Fusion Window", 1, 32);
+        new DurationAttribute("window",
+            StringUtil.constantGetter("Fusion Window"), 1, Integer.MAX_VALUE);
+    private static final Attribute<Integer> ATTR_MAX_DUTY =
+        new DurationAttribute("maxDuty",
+            StringUtil.constantGetter("Maximum Duty"), 1, Integer.MAX_VALUE);
+    private static final Attribute<AttributeOption> ATTR_UPDATE_MODE =
+        Attributes.forOption("updateMode",
+            StringUtil.constantGetter("Image Update Mode"),
+            new AttributeOption[] {
+                UPDATE_DESELECT_ANY,
+                UPDATE_DESELECT_LAST
+            });
     
     private static final int PORT_R = 0;
     private static final int PORT_G = 1;
@@ -37,13 +57,17 @@ public class RGBMatrix extends InstanceFactory
                 ATTR_DATA,
                 ATTR_SELECT,
                 ATTR_FIRST,
-                ATTR_WINDOW
+                ATTR_WINDOW,
+                ATTR_MAX_DUTY,
+                ATTR_UPDATE_MODE
             },
             new Object[] {
                 BitWidth.create(8),
                 BitWidth.create(8),
                 Direction.NORTH,
-                1
+                1,
+                1,
+                UPDATE_DESELECT_ANY
             }
         );
         
@@ -131,12 +155,25 @@ public class RGBMatrix extends InstanceFactory
         int dataWidth = attrs.getValue(ATTR_DATA).getWidth();
         int window = attrs.getValue(ATTR_WINDOW);
         
+        AttributeOption updateModeVal = attrs.getValue(ATTR_UPDATE_MODE);
+        RGBMatrixData.UpdateMode updateMode = null;
+        if (updateModeVal == UPDATE_DESELECT_ANY) {
+            updateMode = RGBMatrixData.UpdateMode.UPDATE_DESELECT_ANY;
+        }
+        else if (updateModeVal == UPDATE_DESELECT_LAST) {
+            updateMode = RGBMatrixData.UpdateMode.UPDATE_DESELECT_LAST;
+        }
+        
         int r = state.getPort(PORT_R).toIntValue();
         int g = state.getPort(PORT_G).toIntValue();
         int b = state.getPort(PORT_B).toIntValue();
         int s = state.getPort(PORT_S).toIntValue();
         
-        RGBMatrixData data = RGBMatrixData.get(state, dataWidth, selectWidth, window);
-        data.loadLines(s, r, g, b);
+        RGBMatrixData data = RGBMatrixData.get(
+            state, dataWidth, selectWidth, window);
+        if (data.loadLines(state.getTickCount(), s, r, g, b, updateMode)) {
+            int maxDuty = attrs.getValue(ATTR_MAX_DUTY);
+            data.updateImage(maxDuty);
+        }
     }
 }
