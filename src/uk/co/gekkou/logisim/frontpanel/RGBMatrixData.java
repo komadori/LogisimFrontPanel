@@ -18,8 +18,9 @@ public class RGBMatrixData implements InstanceData, Cloneable
     private static final int COL_B = 2;
     private static final int COL_COUNT = 3;
     
-    public static enum UpdateMode
+    public static enum SelectorUpdateMode
     {
+        UPDATE_IGNORE_SELECTOR,
         UPDATE_DESELECT_ANY,
         UPDATE_DESELECT_LAST
     }
@@ -31,6 +32,7 @@ public class RGBMatrixData implements InstanceData, Cloneable
     BufferedImage _image;
     AffineTransform _cachedTx;
     long _oldTickCount;
+    int _oldTrigger;
     int _oldSelector;
     int _oldR;
     int _oldG;
@@ -69,7 +71,8 @@ public class RGBMatrixData implements InstanceData, Cloneable
     }
     
     public boolean loadLines(
-        long tickCount, int selector, int r, int g, int b, UpdateMode updateMode)
+        long tickCount, int selector, int r, int g, int b,
+        SelectorUpdateMode updateMode)
     {
         int duration = (int)Math.min(Integer.MAX_VALUE, tickCount - _oldTickCount);
         for (int i=0; i<_selectWidth; i++) {
@@ -93,6 +96,12 @@ public class RGBMatrixData implements InstanceData, Cloneable
         _oldR = r;
         _oldG = g;
         _oldB = b;
+        return update;
+    }
+    
+    public boolean checkTrigger(int trigger) {
+        boolean update = (trigger & ~_oldTrigger) != 0;
+        _oldTrigger = trigger;
         return update;
     }
     
