@@ -101,11 +101,17 @@ public class RGBMatrix extends InstanceFactory
             inst.getAttributeValue(ATTR_UPDATE_MODE) == UPDATE_TRIGGER_RISE;
         Port[] ports = new Port[hasTrigger ? PORT_COUNT : PORT_TRIGGER];
         ports[PORT_R] = new Port(0, -10, Port.INPUT, ATTR_DATA);
+        ports[PORT_R].setToolTip(StringUtil.constantGetter("Red Line"));
         ports[PORT_G] = new Port(0, 0, Port.INPUT, ATTR_DATA);
+        ports[PORT_G].setToolTip(StringUtil.constantGetter("Green Line"));
         ports[PORT_B] = new Port(0, 10, Port.INPUT, ATTR_DATA);
+        ports[PORT_B].setToolTip(StringUtil.constantGetter("Blue Line"));
         ports[PORT_S] = new Port(0, 20, Port.INPUT, ATTR_SELECT);
+        ports[PORT_S].setToolTip(StringUtil.constantGetter("Line Selector"));
         if (hasTrigger) {
             ports[PORT_TRIGGER] = new Port(0, -20, Port.INPUT, 1);
+            ports[PORT_TRIGGER].setToolTip(
+                StringUtil.constantGetter("External Trigger"));
         }
         inst.setPorts(ports);
     }
