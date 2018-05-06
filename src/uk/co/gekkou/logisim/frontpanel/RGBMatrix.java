@@ -4,6 +4,8 @@ import com.cburch.logisim.data.*;
 import com.cburch.logisim.instance.*;
 import com.cburch.logisim.std.wiring.*;
 import com.cburch.logisim.util.*;
+import static com.cburch.logisim.util.StringUtil.*;
+import java.awt.Color;
 import java.awt.Graphics2D;
 
 /**
@@ -14,29 +16,31 @@ public class RGBMatrix extends InstanceFactory
 {
     private static final AttributeOption UPDATE_DESELECT_ANY =
         new AttributeOption("deselectAny",
-            StringUtil.constantGetter("Any Line Deselected"));
+            constantGetter("Any Line Deselected"));
     private static final AttributeOption UPDATE_DESELECT_LAST =
         new AttributeOption("deselectLast",
-            StringUtil.constantGetter("Last Line Deselected"));
+            constantGetter("Last Line Deselected"));
     private static final AttributeOption UPDATE_TRIGGER_RISE =
         new AttributeOption("triggerRise",
-            StringUtil.constantGetter("Rising Trigger"));
+            constantGetter("Rising Trigger"));
     
     private static final Attribute<BitWidth> ATTR_DATA =
-        Attributes.forBitWidth("Data Width");
+        Attributes.forBitWidth("dataWidth", constantGetter("Data Width"));
     private static final Attribute<BitWidth> ATTR_SELECT =
-        Attributes.forBitWidth("Selector Width");
+        Attributes.forBitWidth("selectWidth", constantGetter("Selector Width"));
     private static final Attribute<Direction> ATTR_FIRST =
-        Attributes.forDirection("First Data Line");
+        Attributes.forDirection("firstLine", constantGetter("First Data Line"));
     private static final Attribute<Integer> ATTR_WINDOW =
         new DurationAttribute("window",
-            StringUtil.constantGetter("Fusion Window"), 1, Integer.MAX_VALUE);
+            constantGetter("Fusion Window"), 1, Integer.MAX_VALUE);
     private static final Attribute<Integer> ATTR_MAX_DUTY =
         new DurationAttribute("maxDuty",
-            StringUtil.constantGetter("Maximum Duty"), 1, Integer.MAX_VALUE);
+            constantGetter("Maximum Duty"), 1, Integer.MAX_VALUE);
+    private static final Attribute<Boolean> ATTR_SHOW_SELECT =
+        Attributes.forBoolean("showSelect",
+            constantGetter("Show Selected Lines"));
     private static final Attribute<AttributeOption> ATTR_UPDATE_MODE =
-        Attributes.forOption("updateMode",
-            StringUtil.constantGetter("Image Update Mode"),
+        Attributes.forOption("updateMode", constantGetter("Image Update Mode"),
             new AttributeOption[] {
                 UPDATE_DESELECT_ANY,
                 UPDATE_DESELECT_LAST,
@@ -53,6 +57,7 @@ public class RGBMatrix extends InstanceFactory
     private static final int MIN_SIZE = 40;
     private static final int ELEM_SIZE = 10;
     private static final int BORDER_PADDING = 10;
+    private static final int MARKER_PADDING = 4;
     
     public RGBMatrix() {
         super("RGB Matrix");
@@ -64,6 +69,7 @@ public class RGBMatrix extends InstanceFactory
                 ATTR_FIRST,
                 ATTR_WINDOW,
                 ATTR_MAX_DUTY,
+                ATTR_SHOW_SELECT,
                 ATTR_UPDATE_MODE
             },
             new Object[] {
@@ -72,6 +78,7 @@ public class RGBMatrix extends InstanceFactory
                 Direction.NORTH,
                 1,
                 1,
+                true,
                 UPDATE_DESELECT_ANY
             }
         );
@@ -144,6 +151,51 @@ public class RGBMatrix extends InstanceFactory
         return Bounds.create(0, -height/2, width, height);
     }
     
+    private void paintSelector(Graphics2D g, RGBMatrixData data,
+        Direction first, int pxOffX, int pxOffY, int pxWidth, int pxHeight)
+    {
+        g.setColor(Color.BLUE);
+        int markW = 0, markH = 0, markX = 0, markY = 0, markIX = 0, markIY = 0;
+        if (first == Direction.NORTH) {
+            markW = BORDER_PADDING/2;
+            markH = ELEM_SIZE - MARKER_PADDING;
+            markX = pxOffX - markW;
+            markY = pxOffY + MARKER_PADDING/2;
+            markIX = 0;
+            markIY = ELEM_SIZE;
+        }
+        else if (first == Direction.EAST) {
+            markW = ELEM_SIZE - MARKER_PADDING;
+            markH = BORDER_PADDING/2;
+            markX = pxOffX + pxWidth - ELEM_SIZE + MARKER_PADDING/2;
+            markY = pxOffY - markH;
+            markIX = -ELEM_SIZE;
+            markIY = 0;
+        }
+        else if (first == Direction.SOUTH) {
+            markW = BORDER_PADDING/2;
+            markH = ELEM_SIZE - MARKER_PADDING;
+            markX = pxOffX + pxWidth;
+            markY = pxOffY + pxHeight - ELEM_SIZE + MARKER_PADDING/2;
+            markIX = 0;
+            markIY = -ELEM_SIZE;
+        }
+        else if (first == Direction.WEST) {
+            markW = ELEM_SIZE - MARKER_PADDING;
+            markH = BORDER_PADDING/2;
+            markX = pxOffX;
+            markY = pxOffY + pxHeight;
+            markIX = ELEM_SIZE;
+            markIY = 0;
+        }
+        for (int sel = data.getSelector(), i=0; sel>0; i++) {
+            int n = Integer.numberOfTrailingZeros(sel);
+            sel >>= n+1;
+            i += n;
+            g.fillRect(markX+i*markIX, markY+i*markIY, markW, markH);
+        }
+    }
+    
     @Override
     public void paintInstance(InstancePainter painter)
     {
@@ -165,6 +217,10 @@ public class RGBMatrix extends InstanceFactory
         Graphics2D g = (Graphics2D)painter.getGraphics();
         RGBMatrixData data = RGBMatrixData.get(painter, dataWidth, selectWidth, window);
         data.renderImage(g, first, pxOffX, pxOffY, pxWidth, pxHeight);
+        
+        if (attrs.getValue(ATTR_SHOW_SELECT)) {
+            paintSelector(g, data, first, pxOffX, pxOffY, pxWidth, pxHeight);
+        }
         
         painter.drawBounds();
         painter.drawPorts();

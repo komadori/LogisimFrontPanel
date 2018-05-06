@@ -149,6 +149,11 @@ public class RGBMatrixData implements InstanceData, Cloneable
         }
     }
     
+    public int getSelector()
+    {
+        return _oldSelector;
+    }
+    
     private RGBMatrixData(RGBMatrixData state)
     {
         _dataWidth = state._dataWidth;
