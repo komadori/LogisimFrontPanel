@@ -15,13 +15,13 @@ import java.awt.Graphics2D;
 public class RGBMatrix extends InstanceFactory
 {
     private static final AttributeOption UPDATE_DESELECT_ANY =
-        new AttributeOption("deselectAny",
+        new AttributeOption(UpdateMode.DESELECT_ANY, "deselectAny",
             constantGetter("Any Line Deselected"));
     private static final AttributeOption UPDATE_DESELECT_LAST =
-        new AttributeOption("deselectLast",
+        new AttributeOption(UpdateMode.DESELECT_LAST, "deselectLast",
             constantGetter("Last Line Deselected"));
     private static final AttributeOption UPDATE_TRIGGER_RISE =
-        new AttributeOption("triggerRise",
+        new AttributeOption(UpdateMode.RISING_TRIGGER, "triggerRise",
             constantGetter("Rising Trigger"));
     
     private static final Attribute<BitWidth> ATTR_DATA =
@@ -102,11 +102,23 @@ public class RGBMatrix extends InstanceFactory
         }
     }
     
+    private UpdateMode getUpdateMode(Instance inst)
+    {
+        Object modeObj = inst.getAttributeValue(ATTR_UPDATE_MODE).getValue();
+        if (modeObj instanceof UpdateMode) {
+            return (UpdateMode)modeObj;
+        }
+        else {
+            // This can happen when reloading the component library
+            return UpdateMode.valueOf(modeObj.toString());
+        }
+    }
+    
     private void updatePorts(Instance inst)
     {
-        boolean hasTrigger =
-            inst.getAttributeValue(ATTR_UPDATE_MODE) == UPDATE_TRIGGER_RISE;
-        Port[] ports = new Port[hasTrigger ? PORT_COUNT : PORT_TRIGGER];
+        UpdateMode mode = getUpdateMode(inst);
+        Port[] ports = new Port[mode.isTriggeredExternally() ?
+            PORT_COUNT : PORT_TRIGGER];
         ports[PORT_R] = new Port(0, -10, Port.INPUT, ATTR_DATA);
         ports[PORT_R].setToolTip(StringUtil.constantGetter("Red Line"));
         ports[PORT_G] = new Port(0, 0, Port.INPUT, ATTR_DATA);
@@ -115,7 +127,7 @@ public class RGBMatrix extends InstanceFactory
         ports[PORT_B].setToolTip(StringUtil.constantGetter("Blue Line"));
         ports[PORT_S] = new Port(0, 20, Port.INPUT, ATTR_SELECT);
         ports[PORT_S].setToolTip(StringUtil.constantGetter("Line Selector"));
-        if (hasTrigger) {
+        if (mode.isTriggeredExternally()) {
             ports[PORT_TRIGGER] = new Port(0, -20, Port.INPUT, 1);
             ports[PORT_TRIGGER].setToolTip(
                 StringUtil.constantGetter("External Trigger"));
@@ -236,27 +248,15 @@ public class RGBMatrix extends InstanceFactory
         RGBMatrixData data = RGBMatrixData.get(
             state, dataWidth, selectWidth, window);
         
-        boolean trigger = false;
-        AttributeOption updateModeVal = attrs.getValue(ATTR_UPDATE_MODE);
-        RGBMatrixData.SelectorUpdateMode updateMode =
-                RGBMatrixData.SelectorUpdateMode.UPDATE_IGNORE_SELECTOR;
-        if (updateModeVal == UPDATE_DESELECT_ANY) {
-            updateMode = RGBMatrixData.SelectorUpdateMode.UPDATE_DESELECT_ANY;
-        }
-        else if (updateModeVal == UPDATE_DESELECT_LAST) {
-            updateMode = RGBMatrixData.SelectorUpdateMode.UPDATE_DESELECT_LAST;
-        }
-        else if (updateModeVal == UPDATE_TRIGGER_RISE) {
-            trigger = data.checkTrigger(
-                state.getPort(PORT_TRIGGER).toIntValue());
-        }
+        UpdateMode mode = getUpdateMode(state.getInstance());
         
         int r = state.getPort(PORT_R).toIntValue();
         int g = state.getPort(PORT_G).toIntValue();
         int b = state.getPort(PORT_B).toIntValue();
         int s = state.getPort(PORT_S).toIntValue();
-        if (data.loadLines(state.getTickCount(), s, r, g, b, updateMode) ||
-                trigger) {
+        if (data.loadLines(state.getTickCount(), s, r, g, b, mode) ||
+                (mode.isTriggeredExternally() &&
+                    data.checkTrigger(state.getPort(PORT_TRIGGER).toIntValue()))) {
             int maxDuty = attrs.getValue(ATTR_MAX_DUTY);
             data.updateImage(maxDuty);
         }

@@ -18,13 +18,6 @@ public class RGBMatrixData implements InstanceData, Cloneable
     private static final int COL_B = 2;
     private static final int COL_COUNT = 3;
     
-    public static enum SelectorUpdateMode
-    {
-        UPDATE_IGNORE_SELECTOR,
-        UPDATE_DESELECT_ANY,
-        UPDATE_DESELECT_LAST
-    }
-    
     int _dataWidth;
     int _selectWidth;
     int _fusionWindow;
@@ -71,8 +64,7 @@ public class RGBMatrixData implements InstanceData, Cloneable
     }
     
     public boolean loadLines(
-        long tickCount, int selector, int r, int g, int b,
-        SelectorUpdateMode updateMode)
+        long tickCount, int selector, int r, int g, int b, UpdateMode mode)
     {
         int duration = (int)Math.min(Integer.MAX_VALUE, tickCount - _oldTickCount);
         for (int i=0; i<_selectWidth; i++) {
@@ -81,16 +73,7 @@ public class RGBMatrixData implements InstanceData, Cloneable
             getLineBuffer(i, COL_G).advance(active ? _oldG : 0, duration);
             getLineBuffer(i, COL_B).advance(active ? _oldB : 0, duration);
         }
-        boolean update = false;
-        switch (updateMode)
-        {
-            case UPDATE_DESELECT_ANY:
-                update = (~selector & _oldSelector) != 0;
-                break;
-            case UPDATE_DESELECT_LAST:
-                update = (~selector & _oldSelector & (1 << (_dataWidth-1))) != 0;
-                break;
-        }
+        boolean update = mode.testSelector(_selectWidth, _oldSelector, selector);
         _oldTickCount = tickCount;
         _oldSelector = selector;
         _oldR = r;
