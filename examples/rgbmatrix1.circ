@@ -61,14 +61,15 @@ This file is intended to be loaded by Logisim (http://www.cburch.com/logisim/).
     <wire from="(30,110)" to="(30,120)"/>
     <wire from="(60,110)" to="(60,120)"/>
     <wire from="(50,100)" to="(50,110)"/>
+    <wire from="(30,140)" to="(30,150)"/>
     <wire from="(240,100)" to="(290,100)"/>
     <wire from="(280,70)" to="(280,80)"/>
     <wire from="(380,80)" to="(380,90)"/>
     <wire from="(190,110)" to="(190,130)"/>
     <wire from="(90,50)" to="(90,80)"/>
     <wire from="(60,80)" to="(90,80)"/>
-    <wire from="(110,130)" to="(140,130)"/>
     <wire from="(360,70)" to="(390,70)"/>
+    <wire from="(110,130)" to="(140,130)"/>
     <wire from="(370,100)" to="(390,100)"/>
     <wire from="(360,80)" to="(380,80)"/>
     <wire from="(130,40)" to="(130,80)"/>
@@ -103,7 +104,11 @@ This file is intended to be loaded by Logisim (http://www.cburch.com/logisim/).
       <a name="in_width" val="3"/>
       <a name="out_width" val="5"/>
     </comp>
-    <comp lib="0" loc="(30,120)" name="Clock">
+    <comp lib="1" loc="(30,120)" name="NOT Gate">
+      <a name="facing" val="north"/>
+      <a name="size" val="20"/>
+    </comp>
+    <comp lib="0" loc="(30,150)" name="Clock">
       <a name="facing" val="north"/>
     </comp>
     <comp lib="4" loc="(60,80)" name="Counter">
