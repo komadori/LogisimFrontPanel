@@ -64,11 +64,10 @@ This file is intended to be loaded by Logisim (http://www.cburch.com/logisim/).
     <wire from="(30,140)" to="(30,150)"/>
     <wire from="(240,100)" to="(290,100)"/>
     <wire from="(280,70)" to="(280,80)"/>
-    <wire from="(380,80)" to="(380,90)"/>
+    <wire from="(380,70)" to="(380,80)"/>
     <wire from="(190,110)" to="(190,130)"/>
     <wire from="(90,50)" to="(90,80)"/>
     <wire from="(60,80)" to="(90,80)"/>
-    <wire from="(360,70)" to="(390,70)"/>
     <wire from="(110,130)" to="(140,130)"/>
     <wire from="(370,100)" to="(390,100)"/>
     <wire from="(360,80)" to="(380,80)"/>
@@ -78,7 +77,7 @@ This file is intended to be loaded by Logisim (http://www.cburch.com/logisim/).
     <wire from="(280,80)" to="(290,80)"/>
     <wire from="(330,90)" to="(340,90)"/>
     <wire from="(380,80)" to="(390,80)"/>
-    <wire from="(380,90)" to="(390,90)"/>
+    <wire from="(380,70)" to="(390,70)"/>
     <wire from="(180,80)" to="(190,80)"/>
     <wire from="(190,90)" to="(200,90)"/>
     <wire from="(190,110)" to="(200,110)"/>
@@ -130,7 +129,7 @@ This file is intended to be loaded by Logisim (http://www.cburch.com/logisim/).
       <a name="width" val="8"/>
     </comp>
     <comp lib="3" loc="(180,30)" name="Shifter"/>
-    <comp lib="0" loc="(360,70)" name="Ground">
+    <comp lib="0" loc="(390,90)" name="Ground">
       <a name="facing" val="west"/>
       <a name="width" val="8"/>
     </comp>
