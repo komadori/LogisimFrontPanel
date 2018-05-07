@@ -70,4 +70,14 @@
     nbproject/build-impl.xml file. 
 
     -->
+    <target name="-post-jar" description="Creates a release zip">
+        <zip zipfile="${dist.dir}/frontpanel-release.zip">
+            <fileset dir="." includes="README.md" />
+            <fileset dir="." includes="CHANGELOG.md" />
+            <fileset dir="." includes="LICENSE" />
+            <zipfileset dir="${dist.dir}" includes="LogisimFrontPanel.jar"
+                prefix="dist"/>
+            <zipfileset dir="examples" includes="*.circ" prefix="examples" />
+        </zip>
+    </target>
 </project>
